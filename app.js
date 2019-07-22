@@ -56,19 +56,55 @@ async function resetScores() {
 	await storage.clear();
 }
 
+async function setReadyState( readyState ) {
+	await storage.init({
+		dir: 'storage'
+	});
+	console.log( "setreadystate: " + readyState );
+	await storage.setItem( 'ready', readyState );
+}
+
+async function setRunningState( runningState ) {
+	await storage.init({
+		dir: 'storage'
+	});
+	await storage.setItem( 'running', runningState );
+}
+
+async function getReadyState(){
+	await storage.init({
+		dir: 'storage'
+	});
+	return await storage.getItem( 'ready' );
+}
+
+async function getRunningState(){
+	await storage.init({
+		dir: 'storage'
+	});
+	return await storage.getItem( 'running' );
+}
+
 // Want teamId, score
 app.post( '/game-complete', ( req, res ) => {
-	let score = {
-		teamId: req.body.teamId,
-		teamName: req.body.teamName,
-		score: req.body.score
-	};
-	// Send a message to the dashboard
-	res.io.emit( 'gameComplete', score );
-	// Store the score locally
-	setScore( score );
-	//await setItem( 'scores', scores.push( { teamId: teamdId, score: score} ) );
-	res.status( 200 ).json( { status: 'ok' } );
+	getRunningState().then(( runningState ) => {
+		if ( runningState ) {
+			let score = {
+				teamId: req.body.teamId,
+				teamName: req.body.teamName,
+				score: req.body.score
+			};
+			// Send a message to the dashboard
+			res.io.emit( 'gameComplete', score );
+			// Store the score locally
+			setScore( score );
+			//await setItem( 'scores', scores.push( { teamId: teamdId, score: score} ) );
+			res.status( 200 ).json( { status: 'ok' } );
+		} else {
+			res.status( 500 ).json( { status: 'err', message: 'Cannot update score in-between rounds'} );
+		}
+	});
+	
 });
 
 app.get( '/reset', ( req, res) => {
@@ -83,5 +119,20 @@ io.on( 'connection', function( socket ) {
 	// Listen for team updates
 	socket.on( 'updateTeams', function( teams ) {
 		setTeams( teams );
+		io.emit( 'updateTeams', teams );
+	});
+	// Listen for ready state updates
+	socket.on( 'updateReady', function( ready ) {
+		setReadyState( ready );
+		io.emit( 'updateReady', ready );
+	});
+	// Listen for ready state updates
+	socket.on( 'updateReady', function( running ) {
+		setRunningState( running );
+		io.emit( 'updateRunning', running );
+	});
+	// Listen for game updates
+	socket.on( 'updateGames', function( games ) {
+		io.emit( 'updateGames', games );
 	});
 });
