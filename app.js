@@ -104,7 +104,6 @@ app.post( '/game-complete', ( req, res ) => {
 			res.status( 500 ).json( { status: 'err', message: 'Cannot update score in-between rounds'} );
 		}
 	});
-	
 });
 
 app.get( '/reset', ( req, res) => {
@@ -134,5 +133,10 @@ io.on( 'connection', function( socket ) {
 	// Listen for game updates
 	socket.on( 'updateGames', function( games ) {
 		io.emit( 'updateGames', games );
+	});
+	// Listen for score updates
+	socket.on( 'updateScores', function( scores ) {
+		console.log( 'scores' );
+		io.emit( 'updateScores', scores );
 	});
 });
